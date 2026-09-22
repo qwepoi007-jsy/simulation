@@ -339,8 +339,25 @@ const DEFS = {
     desc: '캠의 모양이 종동절의 움직임을 결정합니다. 돌출형은 정해진 각도 구간에서만 종동절을 들어 올립니다.',
     params: [{ k: 'shape', l: '캠 모양', type: 'select', o: [['bump', '돌출형 (조건 구간)'], ['ecc', '편심형 (부드러운 곡선)'], ['heart', '하트형 (일정 속도)'], ['snail', '달팽이형 (급강하)']], d: 'bump' },
       { k: 'H', l: '들어 올리는 높이 (mm)', min: 2, max: 30, step: 1, d: 10 }, { k: 'start', l: '돌출 시작 각도 (°)', min: 0, max: 359, step: 1, d: 60 }, { k: 'width', l: '돌출 구간 폭 (°)', min: 10, max: 300, step: 1, d: 60 }],
-    info: m => m.p.shape === 'bump' ? `if ${m.p.start}° ≤ 각도 < ${m.p.start + m.p.width}° → ${m.p.H}mm 들어 올림` : '시작 각도와 폭은 돌출형에서만 쓰여요',
-    eval: (m, [x]) => [camLift(m.p, x)],
+    info: m => m.p.shape === 'bump' ? `if ${m.p.start}° ≤ 각도 < ${m.p.start + m.p.width}° → ${m.p.H}mm 들어 올림`
+      : m.p.shape === 'snail' ? '달팽이형은 한쪽 방향으로만 돌려야 해요. 거꾸로 돌리면 턱(단차)에 걸립니다.'
+      : '시작 각도와 폭은 돌출형에서만 쓰여요',
+    eval: (m, [x]) => {
+      if (m.p.shape !== 'snail') return [camLift(m.p, x)];
+      const px = m.st.prevX;
+      if (px != null) {
+        const dx = x - px;
+        if (dx < 0) {
+          const pf = mod360(px), f = mod360(x);
+          if (pf < f || m.st.jammed) { // 턱을 거꾸로 넘으려는 중 (또는 이미 걸려 있음)
+            m.st.jammed = true; m.st.prevX = x;
+            m.warn = '캠이 걸렸어요 (달팽이형은 역회전에서 턱을 넘을 수 없음)';
+            return [m.st.lastLift ?? 0];
+          }
+        } else if (dx > 0) { m.st.jammed = false; } // 정방향으로 돌아오면 풀림
+      }
+      m.st.prevX = x; const v = camLift(m.p, x); m.st.lastLift = v; return [v];
+    },
     code: (m, [x], n) => { const p = m.p;
       if (p.shape === 'ecc') return [`${n} = ${p.H / 2} * (1 - cos(${x}))`, '곡선 함수: 부드럽게 오르내림'];
       if (p.shape === 'heart') return [`${n} = 삼각파(${x}, 높이=${p.H})`, '일정한 속도로 오르내림'];
