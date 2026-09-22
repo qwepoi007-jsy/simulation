@@ -350,29 +350,34 @@ const DEFS = {
         if (dx < 0) {
           const pf = mod360(px), f = mod360(x);
           if (pf < f || m.st.jammed) { // 턱을 거꾸로 넘으려는 중 (또는 이미 걸려 있음)
-            m.st.jammed = true; m.st.prevX = x;
+            if (!m.st.jammed) { m.st.jammed = true; m.st.jamAt = px; } // 턱에 닿은 각도에서 캠이 멈춘다
+            m.st.prevX = x;
             m.warn = '캠이 걸렸어요 (달팽이형은 역회전에서 턱을 넘을 수 없음)';
             return [m.st.lastLift ?? 0];
           }
-        } else if (dx > 0) { m.st.jammed = false; } // 정방향으로 돌아오면 풀림
+        } else if (dx > 0) { m.st.jammed = false; m.st.jamAt = null; } // 정방향으로 돌아오면 풀림
       }
       m.st.prevX = x; const v = camLift(m.p, x); m.st.lastLift = v; return [v];
     },
+    read: m => { if (m.st.jammed) return '걸림 — 역회전 불가'; const v = m.outV[0]; return v == null ? null : `${v.toFixed(1)} mm`; },
     code: (m, [x], n) => { const p = m.p;
       if (p.shape === 'ecc') return [`${n} = ${p.H / 2} * (1 - cos(${x}))`, '곡선 함수: 부드럽게 오르내림'];
       if (p.shape === 'heart') return [`${n} = 삼각파(${x}, 높이=${p.H})`, '일정한 속도로 오르내림'];
       if (p.shape === 'snail') return [`${n} = ${p.H} * (${x} % 360) / 360`, '천천히 오르다 한 번에 떨어짐'];
       return [`${n} = ${p.H} if ${p.start} <= ${x} % 360 < ${p.start + p.width} else 0`, '조건문 if: 정해진 각도 구간에서만 들어 올림']; },
     draw(c, m, b) {
-      const p = m.p, rb = 12, sc = (b.h - 12) / (2 * (rb + p.H) + 6), cx = b.cx, cy = b.y + b.h - (rb + p.H) * sc - 2, th = (m.inV[0] ?? 0) * D2R;
+      const p = m.p, jam = !!m.st.jammed, rb = 12, sc = (b.h - 12) / (2 * (rb + p.H) + 6), cx = b.cx, cy = b.y + b.h - (rb + p.H) * sc - 2;
+      const th = ((jam ? m.st.jamAt : m.inV[0]) ?? 0) * D2R; // 걸리면 캠도 그 자리에서 멈춘다
+      const edge = jam ? '#B23A2E' : INK;
       c.beginPath();
       for (let al = 0; al <= 360; al += 3) { const R = (rb + camLift(p, 90 - al)) * sc; const [x, y] = P(cx, cy, R, al * D2R + th); al ? c.lineTo(x, y) : c.moveTo(x, y); }
-      c.closePath(); c.fillStyle = '#DCEBE1'; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.2; c.stroke();
-      circ(c, cx, cy, 3, '#fff', INK, 1.1); const [mx, my] = P(cx, cy, rb * sc * 0.6, th); circ(c, mx, my, 1.8, INK);
-      const fy = cy - (rb + (m.outV[0] ?? 0)) * sc;
+      c.closePath(); c.fillStyle = jam ? '#F7DEDA' : '#DCEBE1'; c.fill(); c.strokeStyle = edge; c.lineWidth = jam ? 2 : 1.2; c.stroke();
+      circ(c, cx, cy, 3, '#fff', edge, 1.1); const [mx, my] = P(cx, cy, rb * sc * 0.6, th); circ(c, mx, my, 1.8, edge);
+      const fy = cy - (rb + (m.outV[0] ?? 0)) * sc, fcol = jam ? '#B23A2E' : '#D9730D';
       line(c, cx - 11, b.y + 10, cx - 11, b.y + 22, '#9AA5AE', 2); line(c, cx + 11, b.y + 10, cx + 11, b.y + 22, '#9AA5AE', 2);
-      line(c, cx, fy, cx, b.y - 4, '#D9730D', 5);
-      c.fillStyle = '#D9730D'; c.fillRect(cx - 9, fy - 3, 18, 3);
+      line(c, cx, fy, cx, b.y - 4, fcol, 5);
+      c.fillStyle = fcol; c.fillRect(cx - 9, fy - 3, 18, 3);
+      if (jam) txt(c, '걸림', cx + 24, fy, 11, '#B23A2E', 'left', 700);
     } },
 
   geneva: { name: '제네바 기구', base: '제네바', cat: 'conv', concept: '반복문 for', ins: [{ n: '구동 핀 축', t: 'rot' }], outs: [{ n: '제네바 휠', t: 'rot' }],
