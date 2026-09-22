@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="기계 요소를 블록처럼 연결해 운동의 전달·변환과 코딩 개념을 함께 익히는 2D 시뮬레이터">
+<title>오토마타 모듈 시뮬레이터</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23F2B705' stroke='%231F2A33' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23FBFCFA' stroke='%231F2A33' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E6ECE5; --panel:#F6F8F5; --plate:#FBFCFA; --ink:#1F2A33; --muted:#5E6B74;
+  --line:#C9D2CD; --accent:#F2B705; --rot:#2F6FDE; --lin:#D9730D; --danger:#B23A2E;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--panel);color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:14px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 10px}
+button:hover{border-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--rot);outline-offset:1px}
+#app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{font-weight:700;font-size:16px;margin-right:10px;letter-spacing:-0.01em}
+.brand small{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+#btnPlay{background:var(--accent);border-color:#C99700;font-weight:600;min-width:92px}
+.grp{display:flex;align-items:center;gap:6px}
+.sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+#speedVal{min-width:34px;color:var(--muted);font-variant-numeric:tabular-nums}
+select{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff}
+main{display:grid;grid-template-columns:196px 1fr 310px;min-height:0}
+#palette{overflow:auto;border-right:1px solid var(--line);padding:10px}
+.cat{margin:4px 0 12px}
+.cat h4{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px}
+.cat h4 i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.pal{display:block;width:100%;text-align:left;margin-bottom:5px;padding:6px 8px;background:#fff}
+.pal b{font-weight:600;display:block;font-size:13px}
+.pal span{font-size:11px;color:var(--muted)}
+#stageWrap{position:relative;min-width:0;min-height:0;background:var(--paper)}
+#stage{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#status{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--muted);background:rgba(246,248,245,.9);padding:3px 8px;border-radius:4px;pointer-events:none}
+#zoom{position:absolute;right:10px;bottom:8px;display:flex;gap:4px}
+#zoom button{padding:4px 9px;background:rgba(255,255,255,.92)}
+#side{overflow:auto;border-left:1px solid var(--line);padding:12px 14px}
+#side h3{font-size:13px;margin:16px 0 6px;color:var(--muted);font-weight:600}
+.ptitle{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.ptitle i{width:12px;height:12px;border-radius:3px}
+.concept{display:inline-block;margin:6px 0 2px;padding:2px 8px;border-radius:999px;background:#FFF3C4;font-size:12px;font-weight:600}
+.desc{color:var(--muted);line-height:1.55;margin:8px 0}
+.io{font-size:12px;margin:6px 0 10px}
+.field{margin:10px 0}
+.field label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:3px}
+.field label output{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.field input[type=range]{width:100%}
+.field input[type=text],.field select{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff}
+.field.check label{justify-content:flex-start;gap:8px;color:var(--ink);font-size:13px}
+#pinfo{font-size:12px;line-height:1.5;padding:8px 10px;background:#EEF2EE;border-radius:6px;margin:10px 0}
+#pinfo:empty{display:none}
+.danger{color:var(--danger);border-color:#E3B8B3;margin-top:6px}
+.help ol{padding-left:18px;margin:6px 0;line-height:1.7}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:8px 0}
+.legend span{display:flex;align-items:center;gap:5px}
+.shape{display:inline-block;width:11px;height:11px;border:2px solid}
+.shape.rot{border-radius:50%;border-color:var(--rot)}
+.shape.lin{border-color:var(--lin)}
+.shape.any{transform:rotate(45deg) scale(.85);border-color:#7A838C}
+#code{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;line-height:1.55;background:#1F2A33;color:#E8EEF2;border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-all;margin:0}
+#code .cm{color:#9FB3A5}
+#warn{font-size:12px;line-height:1.5}
+#warn div{padding:5px 8px;border-radius:5px;background:#FBEAE7;color:#8A2C22;margin-bottom:4px}
+.modal{position:fixed;inset:0;background:rgba(31,42,51,.45);display:flex;align-items:center;justify-content:center;z-index:10}
+.modal[hidden]{display:none}
+.card{background:#fff;border-radius:10px;padding:18px;width:min(520px,92vw);max-height:86vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.card h2{margin:0 0 12px;font-size:17px}
+.card textarea{width:100%;height:240px;font-family:"IBM Plex Mono",monospace;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:8px}
+.card input[type=text]{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px}
+.mbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.mbtns .primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dlist div{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #EEF1EF}
+.dlist div b{flex:1;font-weight:600}
+.dlist small{color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;max-width:min(560px,90vw);opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;line-height:1.5}
+#toast.show{opacity:1}
+@media (max-width:980px){
+  main{grid-template-columns:1fr;grid-template-rows:auto minmax(360px,1fr) auto}
+  #palette{border-right:0;border-bottom:1px solid var(--line);display:flex;gap:10px;overflow-x:auto;padding:8px}
+  .cat{margin:0;min-width:150px}
+  #side{border-left:0;border-top:1px solid var(--line);max-height:45vh}
+}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">오토마타 모듈 2D<small>기계 요소를 블록처럼 연결하기</small></div>
+    <div class="grp">
+      <button id="btnPlay">⏸ 멈추기</button>
+      <button id="btnStep" title="0.1초 진행">한 걸음</button>
+      <button id="btnReset" title="시간을 0으로">처음으로</button>
+      <label class="grp">속도 <input id="speed" type="range" min="0.1" max="3" step="0.1" value="1"></label>
+      <span id="speedVal">×1.0</span>
+    </div>
+    <div class="sep"></div>
+    <select id="exSel"><option value="">예제 불러오기…</option></select>
+    <div class="sep"></div>
+    <div class="grp">
+      <button id="btnSave">저장</button>
+      <button id="btnLoad">불러오기</button>
+      <button id="btnJson">JSON</button>
+      <button id="btnClear">모두 지우기</button>
+    </div>
+  </header>
+  <main>
+    <aside id="palette"></aside>
+    <div id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="status">모듈을 끌어다 놓거나 눌러서 추가하세요</div>
+      <div id="zoom"><button id="zOut" aria-label="축소">−</button><button id="zFit">맞춤</button><button id="zIn" aria-label="확대">+</button></div>
+    </div>
+    <aside id="side">
+      <section id="props"></section>
+      <h3>번역 코드</h3>
+      <pre id="code"></pre>
+      <h3>점검</h3>
+      <section id="warn"></section>
+    </aside>
+  </main>
+</div>
+<div id="modal" class="modal" hidden><div class="card"><h2 id="mTitle"></h2><div id="mBody"></div><div class="mbtns" id="mBtns"></div></div></div>
+<div id="toast" role="status"></div>
+
+<script>
+/* =====================================================================
+   기본 상수와 도우미
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const TAU = Math.PI * 2, D2R = Math.PI / 180;
+const HEAD = 26, GRID = 20, W = 180, H = 140, HI = 10; // HI: 논리 1 = 10mm
+const INK = '#1F2A33', MUTED = '#5E6B74', PLATE = '#FBFCFA', SEL = '#F2B705';
+const FONT = '"IBM Plex Sans KR","Malgun Gothic",sans-serif';
+const CAT = {
+  src:   { n: '동력원',   c: '#B23A2E' },
+  trans: { n: '전달 (회전 → 회전)', c: '#3E5C76' },
+  conv:  { n: '변환 (운동의 형태 바꾸기)', c: '#2E7D5B' },
+  logic: { n: '논리 (직선 신호 0/1)', c: '#6A4C93' },
+  out:   { n: '출력과 관찰', c: '#56606B' }
+};
+const SIG = { rot: { n: '회전', c: '#2F6FDE' }, lin: { n: '직선', c: '#D9730D' }, any: { n: '아무거나', c: '#7A838C' } };
+const mod360 = a => ((a % 360) + 360) % 360;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const bit = v => v != null && v >= HI / 2;
+const P = (cx, cy, r, a) => [cx + r * Math.cos(a), cy - r * Math.sin(a)]; // 수학 좌표(반시계 +)
+
+function line(c, x1, y1, x2, y2, col, w) { c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); }
+function circ(c, x, y, r, fill, stroke, w) { c.beginPath(); c.arc(x, y, Math.max(0.5, r), 0, TAU); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = w || 1.5; c.stroke(); } }
+function joint(c, x, y) { circ(c, x, y, 3.2, '#fff', INK, 1.4); }
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function txt(c, s, x, y, size, col, align, weight) { c.font = `${weight || 400} ${size}px ${FONT}`; c.fillStyle = col; c.textAlign = align || 'left'; c.textBaseline = 'middle'; c.fillText(s, x, y); }
+function ground(c, x, y) { c.fillStyle = '#C9D2CD'; c.beginPath(); c.moveTo(x, y); c.lineTo(x - 7, y + 10); c.lineTo(x + 7, y + 10); c.closePath(); c.fill(); }
+
+function gear(c, cx, cy, r, z, deg, fill) {
+  const s = Math.PI / z, t = Math.max(1.4, Math.min(r * 0.15, Math.PI * r / z * 0.55)), a0 = deg * D2R;
+  c.beginPath();
+  for (let i = 0; i < z; i++) {
+    const a = a0 + i * 2 * s;
+    [[a - 0.5 * s, r - t], [a - 0.22 * s, r + t], [a + 0.22 * s, r + t], [a + 0.5 * s, r - t]].forEach(([aa, rr_], k) => {
+      const [x, y] = P(cx, cy, rr_, aa); (i === 0 && k === 0) ? c.moveTo(x, y) : c.lineTo(x, y);
+    });
+  }
+  c.closePath(); c.fillStyle = fill; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.1; c.stroke();
+  circ(c, cx, cy, Math.max(2, r * 0.2), '#fff', INK, 1.1);
+  const [mx, my] = P(cx, cy, r * 0.6, a0); circ(c, mx, my, Math.max(1.6, r * 0.09), INK);
+}
+
+/* ---------- 메커니즘 수식 ---------- */
+function camLift(p, deg) {
+  const f = mod360(deg), Hh = p.H;
+  switch (p.shape) {
+    case 'ecc':   return Hh * (1 - Math.cos(f * D2R)) / 2;
+    case 'heart': return f < 180 ? Hh * f / 180 : Hh * (360 - f) / 180;
+    case 'snail': return Hh * f / 360;
+    default: {
+      const rel = mod360(f - p.start), Wd = p.width, r = Math.min(20, Wd / 3);
+      if (rel >= Wd) return 0;
+      let k = 1; if (rel < r) k = rel / r; else if (rel > Wd - r) k = (Wd - rel) / r;
+      return Hh * k * k * (3 - 2 * k);
+    }
+  }
+}
+function genevaOut(n, deg) {
+  const a = TAU / n, lam = Math.sin(Math.PI / n), half = Math.PI / 2 - Math.PI / n;
+  const th = deg * D2R, k = Math.floor(th / TAU), ph = th - k * TAU - Math.PI;
+  let u;
+  if (ph <= -half) u = k * a;
+  else if (ph >= half) u = (k + 1) * a;
+  else u = k * a + a / 2 + Math.atan2(lam * Math.sin(ph), 1 - lam * Math.cos(ph));
+  return -u / D2R; // 제네바 휠은 반대 방향으로 돈다
+}
+function fourbarSolve(p, deg) {
+  const { a, b, c: cc, d } = p, th = deg * D2R;
+  const Ax = a * Math.cos(th), Ay = a * Math.sin(th);
+  const dx = d - Ax, dy = -Ay, D = Math.hypot(dx, dy);
+  if (D > b + cc || D < Math.abs(b - cc) || D === 0) return null;
+  const aa = (b * b - cc * cc + D * D) / (2 * D), h = Math.sqrt(Math.max(0, b * b - aa * aa));
+  const px = Ax + aa * dx / D, py = Ay + aa * dy / D;
+  const Bx = px - h * dy / D, By = py + h * dx / D;
+  return { ang: Math.atan2(By, Bx - d) / D2R, Ax, Ay, Bx, By };
+}
+function crankX(r, L, deg) { const th = deg * D2R; return r * Math.cos(th) + Math.sqrt(Math.max(0, L * L - r * r * Math.sin(th) ** 2)); }
+
+/* ---------- 운동 판정 ---------- */
+function classify(buf, type) {
+  if (buf.length < 90) return '측정 중…';
+  let min = Infinity, max = -Infinity; buf.forEach(v => { min = Math.min(min, v); max = Math.max(max, v); });
+  if (max - min < 1e-3) return '정지';
+  if (type === 'lin') { const u = new Set(buf.map(v => Math.round(v * 10))); if (u.size <= 2) return '논리 신호 (0 ↔ 1)'; }
+  const v = []; for (let i = 1; i < buf.length; i++) v.push(buf[i] - buf[i - 1]);
+  const maxA = Math.max(...v.map(Math.abs)); if (maxA < 1e-7) return '정지';
+  const eps = maxA * 0.06; let dwell = 0, pos = 0, neg = 0, flips = 0, last = 0;
+  v.forEach(x => { if (Math.abs(x) < eps) { dwell++; return; } const s = Math.sign(x); s > 0 ? pos++ : neg++; if (last && s !== last) flips++; last = s; });
+  const df = dwell / v.length, rot = type === 'rot';
+  if (flips >= 1 && pos > 1 && neg > 1) return (rot ? '요동 운동 (흔들기)' : '직선 왕복 운동') + (df > 0.2 ? ' + 멈춤 구간' : '');
+  if (df > 0.2) return rot ? '간헐 운동 (끊어서 회전)' : '간헐 직선 운동 (끊어서 이동)';
+  return rot ? '연속 회전 운동' : '한 방향 직선 운동';
+}
+
+/* =====================================================================
+   모듈 정의 (표준 블록)
+   - ins/outs: 표준 축. rot = 회전축(●), lin = 직선축(■), any(◆)
+   - eval: 입력값 → 출력값 (회전은 도°, 직선은 mm)
+   - code: 번역 코드 한 줄 + 설명
+   ===================================================================== */
+const DEFS = {
+  motor: { name: '모터 (손잡이)', base: '모터', cat: 'src', concept: '시작점 main()', w: 170, h: 130, ins: [], outs: [{ n: '출력축', t: 'rot' }],
+    desc: '모든 움직임의 시작점입니다. 일정한 속도로 축을 돌립니다.',
+    params: [{ k: 'rpm', l: '회전 속도 (rpm)', min: 1, max: 120, step: 1, d: 20 }, { k: 'dir', l: '방향', type: 'select', o: [[1, '반시계 (+)'], [-1, '시계 (−)']], d: 1 }],
+    eval: (m, i, t) => [m.p.rpm * 6 * t * m.p.dir],
+    code: (m, i, n) => [`${n} = ${m.p.dir < 0 ? '-' : ''}${m.p.rpm} * 6 * t`, `동력 시작: 1분에 ${m.p.rpm}바퀴 (각도, °)`],
+    draw(c, m, b) {
+      const v = m.outV[0] ?? 0, r = Math.min(b.h, b.w) * 0.4;
+      circ(c, b.cx, b.cy, r, '#F3E3DF', INK, 1.4);
+      const [x, y] = P(b.cx, b.cy, r * 0.78, v * D2R);
+      line(c, b.cx, b.cy, x, y, INK, 5); circ(c, x, y, 6, CAT.src.c, INK, 1.2); circ(c, b.cx, b.cy, 4, '#fff', INK, 1.2);
+      txt(c, `${m.p.rpm} rpm`, b.x + b.w, b.y + 8, 11, MUTED, 'right');
+    } },
+
+  gear: { name: '기어 쌍', base: '기어', cat: 'trans', concept: '곱셈 ×', ins: [{ n: '구동축', t: 'rot' }], outs: [{ n: '종동축', t: 'rot' }],
+    desc: '맞물린 두 기어입니다. 잇수 비율만큼 속도가 바뀌고, 회전 방향은 반대가 됩니다.',
+    params: [{ k: 'z1', l: '구동 기어 잇수', min: 8, max: 60, step: 1, d: 20 }, { k: 'z2', l: '종동 기어 잇수', min: 8, max: 60, step: 1, d: 40 }],
+    info: m => `기어비 ${m.p.z1}:${m.p.z2} → 출력 속도 ×${(m.p.z1 / m.p.z2).toFixed(2)}, 방향 반대`,
+    eval: (m, [x]) => [-x * m.p.z1 / m.p.z2],
+    code: (m, [x], n) => [`${n} = -${x} * ${m.p.z1}/${m.p.z2}`, `곱셈 연산: 속도 ×${(m.p.z1 / m.p.z2).toFixed(2)}, 방향 반전`],
+    draw(c, m, b) {
+      const { z1, z2 } = m.p, k = Math.min((b.w - 12) / (2 * (z1 + z2)), (b.h - 10) / (2 * Math.max(z1, z2)));
+      const r1 = z1 * k, r2 = z2 * k, x1 = b.cx - (r1 + r2) / 2, x2 = x1 + r1 + r2;
+      gear(c, x1, b.cy, r1, z1, m.inV[0] ?? 0, '#DCE6EF');
+      gear(c, x2, b.cy, r2, z2, (m.outV[0] ?? 0) + 180 + 180 / z2, '#EEF2F6');
+    } },
+
+  pulley: { name: '풀리와 벨트', base: '풀리', cat: 'trans', concept: '함수 호출', ins: [{ n: '구동 풀리', t: 'rot' }], outs: [{ n: '종동 풀리', t: 'rot' }],
+    desc: '벨트로 멀리 떨어진 축에 회전을 전달합니다. 방향은 그대로이고, 벨트를 엇걸면 반대가 됩니다.',
+    params: [{ k: 'd1', l: '구동 풀리 지름 (mm)', min: 10, max: 80, step: 1, d: 30 }, { k: 'd2', l: '종동 풀리 지름 (mm)', min: 10, max: 80, step: 1, d: 60 }, { k: 'cross', l: '엇걸이 벨트 (방향 반전)', type: 'check', d: 0 }],
+    info: m => `속도 ×${(m.p.d1 / m.p.d2).toFixed(2)}, 방향 ${m.p.cross ? '반대' : '같음'}`,
+    eval: (m, [x]) => [(m.p.cross ? -1 : 1) * x * m.p.d1 / m.p.d2],
+    code: (m, [x], n) => [`${n} = ${m.p.cross ? '-' : ''}${x} * ${m.p.d1}/${m.p.d2}`, `함수 호출: 벨트로 먼 축에 값 전달${m.p.cross ? ' (엇걸이: 반전)' : ''}`],
+    draw(c, m, b) {
+      const { d1, d2 } = m.p, k = Math.min((b.h - 8) / (2 * Math.max(d1, d2)) * 2, (b.w * 0.36) / Math.max(d1, d2));
+      const r1 = d1 / 2 * k, r2 = d2 / 2 * k, x1 = b.x + 4 + r1, x2 = b.x + b.w - 4 - r2, cy = b.cy;
+      c.strokeStyle = '#46505A'; c.lineWidth = 2.2; c.beginPath();
+      if (m.p.cross) { c.moveTo(x1, cy - r1); c.lineTo(x2, cy + r2); c.moveTo(x1, cy + r1); c.lineTo(x2, cy - r2); }
+      else { c.moveTo(x1, cy - r1); c.lineTo(x2, cy - r2); c.moveTo(x1, cy + r1); c.lineTo(x2, cy + r2); }
+      c.stroke();
+      [[x1, r1, m.inV[0] ?? 0], [x2, r2, m.outV[0] ?? 0]].forEach(([x, r, a]) => {
+        circ(c, x, cy, r, '#E4EAF0', INK, 1.3);
+        for (let j = 0; j < 3; j++) { const [px, py] = P(x, cy, r * 0.85, a * D2R + j * TAU / 3); line(c, x, cy, px, py, '#7C8894', 1.6); }
+        circ(c, x, cy, 3, '#fff', INK, 1.1);
+      });
+    } },
+
+  worm: { name: '웜과 웜휠', base: '웜', cat: 'trans', concept: '나눗셈 ÷', ins: [{ n: '웜 축', t: 'rot' }], outs: [{ n: '웜휠 축', t: 'rot' }],
+    desc: '나사 모양의 웜이 한 바퀴 돌 때 웜휠은 한 칸만 돕니다. 속도를 크게 줄이고, 거꾸로는 돌릴 수 없습니다.',
+    params: [{ k: 's', l: '웜 줄 수', min: 1, max: 3, step: 1, d: 1 }, { k: 'z', l: '웜휠 잇수', min: 10, max: 60, step: 1, d: 30 }],
+    info: m => `감속비 ${m.p.z / m.p.s}:1 → 웜 ${m.p.z / m.p.s}바퀴에 웜휠 1바퀴`,
+    eval: (m, [x]) => [x * m.p.s / m.p.z],
+    code: (m, [x], n) => [`${n} = ${x} * ${m.p.s}/${m.p.z}`, `나눗셈: ${(m.p.z / m.p.s)}분의 1로 크게 감속`],
+    draw(c, m, b) {
+      const rw = Math.min(b.h * 0.34, b.w * 0.3), wy = b.y + rw + 6, yy = wy + rw + 9;
+      gear(c, b.cx, wy, rw, m.p.z, m.outV[0] ?? 0, '#E4EAF0');
+      c.save(); rr(c, b.x + 6, yy - 8, b.w - 12, 16, 7); c.fillStyle = '#D5DDE5'; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.2; c.stroke(); c.clip();
+      const pitch = 9, off = mod360(m.inV[0] ?? 0) / 360 * pitch * m.p.s;
+      c.strokeStyle = '#56606B'; c.lineWidth = 1.4;
+      for (let x = b.x - pitch + off; x < b.x + b.w + pitch; x += pitch) { c.beginPath(); c.moveTo(x, yy - 8); c.lineTo(x + 5, yy + 8); c.stroke(); }
+      c.restore();
+    } },
+
+  crank: { name: '크랭크-슬라이더', base: '크랭크', cat: 'conv', concept: '형 변환 (회전→직선)', ins: [{ n: '크랭크 축', t: 'rot' }], outs: [{ n: '슬라이더', t: 'lin' }],
+    desc: '회전을 직선 왕복으로 바꿉니다. 슬라이더가 움직이는 거리(행정)는 크랭크 반지름의 2배입니다.',
+    params: [{ k: 'r', l: '크랭크 반지름 (mm)', min: 5, max: 40, step: 1, d: 15 }, { k: 'L', l: '연결봉 길이 (mm)', min: 20, max: 120, step: 1, d: 50 }],
+    info: m => `행정 = 2 × ${m.p.r} = ${2 * m.p.r} mm` + (m.p.L <= m.p.r ? '<br>⚠ 연결봉이 크랭크보다 길어야 해요' : ''),
+    eval: (m, [x]) => { const L = Math.max(m.p.L, m.p.r + 1); return [crankX(m.p.r, L, x) - (L - m.p.r)]; },
+    code: (m, [x], n) => [`${n} = 크랭크(${x}, r=${m.p.r}, L=${m.p.L})`, `형 변환: 회전 → 직선 왕복 (0~${2 * m.p.r}mm)`],
+    draw(c, m, b) {
+      const r = m.p.r, L = Math.max(m.p.L, r + 1), a = m.inV[0] ?? 0;
+      const sc = Math.min((b.w - 20) / (2 * r + L), (b.h / 2 - 4) / r), ox = b.x + 4 + r * sc, oy = b.cy;
+      line(c, ox, oy + 9, b.x + b.w, oy + 9, '#C9D2CD', 2);
+      circ(c, ox, oy, r * sc, '#E7EFE9', '#9FB3A5', 1);
+      const [ax, ay] = P(ox, oy, r * sc, a * D2R), sx = ox + crankX(r, L, a) * sc;
+      line(c, ox, oy, ax, ay, CAT.src.c, 4); line(c, ax, ay, sx, oy, '#56606B', 3);
+      c.fillStyle = '#F6D7B8'; c.strokeStyle = INK; c.lineWidth = 1.2; c.fillRect(sx - 11, oy - 8, 22, 16); c.strokeRect(sx - 11, oy - 8, 22, 16);
+      joint(c, ox, oy); joint(c, ax, ay); joint(c, sx, oy);
+    } },
+
+  fourbar: { name: '4절 링크 (크랭크-로커)', base: '링크', cat: 'conv', concept: '형 변환 (회전→요동)', ins: [{ n: '크랭크 축', t: 'rot' }], outs: [{ n: '로커 축', t: 'rot' }],
+    desc: '네 개의 막대로 연속 회전을 일정 각도 사이를 오가는 흔들기(요동)로 바꿉니다.',
+    params: [{ k: 'a', l: '크랭크 a (mm)', min: 5, max: 60, step: 1, d: 20 }, { k: 'b', l: '커플러 b (mm)', min: 20, max: 120, step: 1, d: 60 }, { k: 'c', l: '로커 c (mm)', min: 10, max: 100, step: 1, d: 45 }, { k: 'd', l: '고정 링크 d (mm)', min: 20, max: 120, step: 1, d: 55 }],
+    info: m => { const L = [m.p.a, m.p.b, m.p.c, m.p.d], s = Math.min(...L), l = Math.max(...L), sum = L.reduce((x, y) => x + y, 0);
+      const ok = s + l <= sum - s - l && m.p.a === s;
+      return ok ? `✔ 크랭크-로커 조건 만족<br>가장 짧은 a(${s}) + 가장 긴 링크(${l}) ≤ 나머지 합(${sum - s - l})` : `⚠ 크랭크가 한 바퀴를 다 돌지 못할 수 있어요<br>a를 가장 짧게, (최단+최장) ≤ 나머지 두 링크 합이 되게 하세요`; },
+    eval: (m, [x]) => { const s = fourbarSolve(m.p, x); if (!s) { m.warn = '링크가 끝까지 돌지 못하고 걸려요 (길이 조합 확인)'; return [m.st.last ?? null]; } m.st.sol = s; m.st.last = s.ang; return [s.ang]; },
+    code: (m, [x], n) => [`${n} = 링크(${x}, a=${m.p.a}, b=${m.p.b}, c=${m.p.c}, d=${m.p.d})`, '형 변환: 연속 회전 → 요동 (흔들기)'],
+    draw(c, m, b) {
+      const { a, b: bb, c: cc, d } = m.p, s = m.st.sol || fourbarSolve(m.p, m.inV[0] ?? 0);
+      const sc = Math.min((b.w - 14) / (a + d + cc), (b.h - 14) / (a + cc)), ox = b.x + 7 + a * sc, oy = b.y + 4 + cc * sc;
+      const X = x => ox + x * sc, Y = y => oy - y * sc;
+      c.setLineDash([4, 3]); line(c, ox, oy, X(d), oy, '#9AA5AE', 1.2); c.setLineDash([]);
+      ground(c, ox, oy + 3); ground(c, X(d), oy + 3);
+      if (s) {
+        line(c, ox, oy, X(s.Ax), Y(s.Ay), CAT.src.c, 4);
+        line(c, X(s.Ax), Y(s.Ay), X(s.Bx), Y(s.By), '#56606B', 3);
+        line(c, X(d), oy, X(s.Bx), Y(s.By), CAT.conv.c, 5);
+        joint(c, X(s.Ax), Y(s.Ay)); joint(c, X(s.Bx), Y(s.By));
+      }
+      joint(c, ox, oy); joint(c, X(d), oy);
+    } },
+
+  cam: { name: '캠과 종동절', base: '캠', cat: 'conv', concept: '조건문 if', ins: [{ n: '캠 축', t: 'rot' }], outs: [{ n: '종동절', t: 'lin' }],
+    desc: '캠의 모양이 종동절의 움직임을 결정합니다. 돌출형은 정해진 각도 구간에서만 종동절을 들어 올립니다.',
+    params: [{ k: 'shape', l: '캠 모양', type: 'select', o: [['bump', '돌출형 (조건 구간)'], ['ecc', '편심형 (부드러운 곡선)'], ['heart', '하트형 (일정 속도)'], ['snail', '달팽이형 (급강하)']], d: 'bump' },
+      { k: 'H', l: '들어 올리는 높이 (mm)', min: 2, max: 30, step: 1, d: 10 }, { k: 'start', l: '돌출 시작 각도 (°)', min: 0, max: 359, step: 1, d: 60 }, { k: 'width', l: '돌출 구간 폭 (°)', min: 10, max: 300, step: 1, d: 60 }],
+    info: m => m.p.shape === 'bump' ? `if ${m.p.start}° ≤ 각도 < ${m.p.start + m.p.width}° → ${m.p.H}mm 들어 올림` : '시작 각도와 폭은 돌출형에서만 쓰여요',
+    eval: (m, [x]) => [camLift(m.p, x)],
+    code: (m, [x], n) => { const p = m.p;
+      if (p.shape === 'ecc') return [`${n} = ${p.H / 2} * (1 - cos(${x}))`, '곡선 함수: 부드럽게 오르내림'];
+      if (p.shape === 'heart') return [`${n} = 삼각파(${x}, 높이=${p.H})`, '일정한 속도로 오르내림'];
+      if (p.shape === 'snail') return [`${n} = ${p.H} * (${x} % 360) / 360`, '천천히 오르다 한 번에 떨어짐'];
+      return [`${n} = ${p.H} if ${p.start} <= ${x} % 360 < ${p.start + p.width} else 0`, '조건문 if: 정해진 각도 구간에서만 들어 올림']; },
+    draw(c, m, b) {
+      const p = m.p, rb = 12, sc = (b.h - 12) / (2 * (rb + p.H) + 6), cx = b.cx, cy = b.y + b.h - (rb + p.H) * sc - 2, th = (m.inV[0] ?? 0) * D2R;
+      c.beginPath();
+      for (let al = 0; al <= 360; al += 3) { const R = (rb + camLift(p, 90 - al)) * sc; const [x, y] = P(cx, cy, R, al * D2R + th); al ? c.lineTo(x, y) : c.moveTo(x, y); }
+      c.closePath(); c.fillStyle = '#DCEBE1'; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.2; c.stroke();
+      circ(c, cx, cy, 3, '#fff', INK, 1.1); const [mx, my] = P(cx, cy, rb * sc * 0.6, th); circ(c, mx, my, 1.8, INK);
+      const fy = cy - (rb + (m.outV[0] ?? 0)) * sc;
+      line(c, cx - 11, b.y + 10, cx - 11, b.y + 22, '#9AA5AE', 2); line(c, cx + 11, b.y + 10, cx + 11, b.y + 22, '#9AA5AE', 2);
+      line(c, cx, fy, cx, b.y - 4, '#D9730D', 5);
+      c.fillStyle = '#D9730D'; c.fillRect(cx - 9, fy - 3, 18, 3);
+    } },
+
+  geneva: { name: '제네바 기구', base: '제네바', cat: 'conv', concept: '반복문 for', ins: [{ n: '구동 핀 축', t: 'rot' }], outs: [{ n: '제네바 휠', t: 'rot' }],
+    desc: '구동 핀이 홈에 들어가 있을 때만 휠이 한 칸 돌고, 나머지 시간은 멈춥니다. 연속 회전을 끊어서 한 칸씩 전달합니다.',
+    params: [{ k: 'n', l: '홈 개수 (한 바퀴 칸 수)', type: 'select', o: [[3, '3칸 (120°)'], [4, '4칸 (90°)'], [5, '5칸 (72°)'], [6, '6칸 (60°)'], [8, '8칸 (45°)']], d: 4 }],
+    info: m => { const n = m.p.n, move = 180 - 360 / n; return `구동축 1바퀴 = 휠 한 칸 ${(360 / n).toFixed(0)}°<br>움직이는 시간 ${(move / 360 * 100).toFixed(0)}%, 멈춘 시간 ${(100 - move / 360 * 100).toFixed(0)}%`; },
+    eval: (m, [x]) => [genevaOut(m.p.n, x)],
+    code: (m, [x], n) => [`${n} = -(${x} // 360) * ${Math.round(360 / m.p.n)}`, `반복문: 한 바퀴마다 i += 1 (한 칸 ${Math.round(360 / m.p.n)}°), 그 사이엔 멈춤`],
+    draw(c, m, b) {
+      const n = m.p.n, sn = Math.sin(Math.PI / n), co = Math.cos(Math.PI / n), a = TAU / n;
+      const C = Math.min((b.w - 12) / (sn + 1 + co), (b.h - 6) / (2 * co)), r = C * sn, R = C * co;
+      const dx = b.x + 6 + r, wx = dx + C, cy = b.cy, out = (m.outV[0] ?? 0) * D2R, pin = ((m.inV[0] ?? 0) - 180) * D2R;
+      circ(c, wx, cy, R, '#E4EAF0', INK, 1.2);
+      for (let j = 0; j < n; j++) {
+        const ang = Math.PI + a / 2 + out + j * a, [x1, y1] = P(wx, cy, C - r - 4, ang), [x2, y2] = P(wx, cy, R + 2, ang);
+        line(c, x1, y1, x2, y2, INK, 8); line(c, x1, y1, x2, y2, PLATE, 5.5);
+      }
+      circ(c, wx, cy, 3, '#fff', INK, 1.1);
+      circ(c, dx, cy, r * 0.55, '#F3E3DF', INK, 1.1);
+      const [px, py] = P(dx, cy, r, pin); line(c, dx, cy, px, py, CAT.src.c, 3.5); circ(c, px, py, 3.6, SEL, INK, 1.2); joint(c, dx, cy);
+    } },
+
+  rack: { name: '랙과 피니언', base: '랙', cat: 'conv', concept: '배열 인덱스 [i]', ins: [{ n: '피니언 축', t: 'rot' }], outs: [{ n: '위치', t: 'lin' }],
+    desc: '피니언이 돌면서 랙 위를 따라 이동합니다. 랙을 칸으로 나누면 현재 위치를 배열의 번호처럼 읽을 수 있습니다.',
+    params: [{ k: 'r', l: '피니언 반지름 (mm)', min: 5, max: 40, step: 0.1, d: 15 }, { k: 'L', l: '랙 길이 (mm)', min: 40, max: 300, step: 5, d: 120 },
+      { k: 'cells', l: '칸 수 (배열 크기)', min: 1, max: 8, step: 1, d: 4 }, { k: 'start', l: '시작 위치 (mm)', min: 0, max: 300, step: 1, d: 0 }, { k: 'inv', l: '이동 방향 반전', type: 'check', d: 0 }],
+    info: m => `피니언 한 바퀴 = ${(TAU * m.p.r).toFixed(1)} mm 이동<br>한 칸 = ${(m.p.L / m.p.cells).toFixed(1)} mm`,
+    eval: (m, [x]) => { const v = m.p.start + (m.p.inv ? -1 : 1) * x * D2R * m.p.r; if (v < 0 || v > m.p.L) m.warn = '랙 끝에 닿았어요 (배열 범위를 벗어남, IndexError)'; return [clamp(v, 0, m.p.L)]; },
+    code: (m, [x], n) => [`${n} = 제한(${m.p.start} ${m.p.inv ? '-' : '+'} 라디안(${x}) * ${m.p.r}, 0, ${m.p.L})`, `배열 인덱스: 칸 번호 i = ${n} // ${+(m.p.L / m.p.cells).toFixed(1)}`],
+    read: m => { const v = m.outV[0]; if (v == null) return null; return `${v.toFixed(1)} mm  칸 [${rackIdx(m, v)}]`; },
+    draw(c, m, b) {
+      const p = m.p, v = m.outV[0] ?? p.start, sc = (b.w - 20) / p.L, x0 = b.x + 10, ry = b.y + b.h - 16, cw = p.L / p.cells, idx = rackIdx(m, v);
+      c.fillStyle = '#FFF3C4'; c.fillRect(x0 + idx * cw * sc, b.y + 14, cw * sc, ry - b.y - 14);
+      c.setLineDash([3, 3]);
+      for (let i = 0; i <= p.cells; i++) { const x = x0 + i * cw * sc; line(c, x, b.y + 14, x, ry, '#B7C1C8', 1); }
+      c.setLineDash([]);
+      for (let i = 0; i < p.cells; i++) txt(c, `[${i}]`, x0 + (i + 0.5) * cw * sc, b.y + 7, 10, i === idx ? INK : MUTED, 'center', i === idx ? 700 : 400);
+      c.fillStyle = '#D5DDE5'; c.fillRect(x0 - 4, ry, b.w - 12, 11); c.strokeStyle = INK; c.lineWidth = 1; c.strokeRect(x0 - 4, ry, b.w - 12, 11);
+      c.fillStyle = '#9AA5AE'; for (let x = x0 - 2; x < x0 + b.w - 18; x += 6) { c.beginPath(); c.moveTo(x, ry); c.lineTo(x + 2, ry - 3); c.lineTo(x + 4, ry); c.fill(); }
+      const pr = Math.min(15, b.h * 0.22), px = x0 + v * sc;
+      gear(c, px, ry - pr - 3, pr, 12, -(v / p.r) / D2R, '#DCEBE1');
+    } },
+
+  ratchet: { name: '래칫', base: '래칫', cat: 'conv', concept: '누적 +=', ins: [{ n: '레버 축', t: 'rot' }], outs: [{ n: '래칫 휠', t: 'rot' }],
+    desc: '멈춤쇠가 한 방향 움직임만 휠에 전달합니다. 왔다 갔다 하는 요동을 한 방향으로 끊어 도는 간헐 회전으로 바꿉니다.',
+    params: [{ k: 'dir', l: '전달하는 방향', type: 'select', o: [[1, '+ 방향만'], [-1, '− 방향만']], d: 1 }],
+    eval: (m, [x]) => { const s = m.st; if (s.prev == null) { s.prev = x; s.acc = 0; } const d = x - s.prev; s.prev = x; if (d * m.p.dir > 0) s.acc += Math.abs(d); return [s.acc * m.p.dir]; },
+    code: (m, [x], n) => [`${n} += max(0, 변화량(${x}))`, '누적: 한 방향 움직임만 더함 (반대 방향은 무시)'],
+    draw(c, m, b) {
+      const R = Math.min(b.h * 0.4, b.w * 0.3), cx = b.cx, cy = b.cy, a0 = (m.outV[0] ?? 0) * D2R, z = 12, st = TAU / z;
+      c.beginPath();
+      for (let i = 0; i < z; i++) { const a = a0 + i * st, [x1, y1] = P(cx, cy, R - 6, a), [x2, y2] = P(cx, cy, R, a + st * 0.92), [x3, y3] = P(cx, cy, R - 6, a + st * 0.93); i ? c.lineTo(x1, y1) : c.moveTo(x1, y1); c.lineTo(x2, y2); c.lineTo(x3, y3); }
+      c.closePath(); c.fillStyle = '#E4EAF0'; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.1; c.stroke();
+      const la = ((m.inV[0] ?? 0) + 90) * D2R, [lx, ly] = P(cx, cy, R + 12, la), [tx, ty] = P(cx, cy, R - 3, la - 0.25);
+      line(c, cx, cy, lx, ly, CAT.conv.c, 4); line(c, lx, ly, tx, ty, INK, 2);
+      const [fx, fy] = P(cx, cy, R + 10, -Math.PI / 2 + 0.5), [gx, gy] = P(cx, cy, R - 3, -Math.PI / 2 + 0.2); line(c, fx, fy, gx, gy, '#9AA5AE', 2.5);
+      joint(c, cx, cy);
+    } },
+
+  lever: { name: '레버 (지렛대)', base: '레버', cat: 'conv', concept: '비례 연산 ×k', ins: [{ n: '입력 막대', t: 'lin' }], outs: [{ n: '출력 막대', t: 'lin' }],
+    desc: '받침점에서 두 팔의 길이 비율만큼 이동 거리를 키우거나 줄입니다. 시소형은 방향이 반대가 됩니다.',
+    params: [{ k: 'a', l: '입력 팔 길이 (mm)', min: 10, max: 80, step: 1, d: 30 }, { k: 'b', l: '출력 팔 길이 (mm)', min: 10, max: 120, step: 1, d: 60 }, { k: 'inv', l: '시소형 (방향 반전)', type: 'check', d: 0 }],
+    info: m => `이동 거리 ×${(m.p.b / m.p.a).toFixed(2)}${m.p.inv ? ', 방향 반대' : ''}`,
+    eval: (m, [x]) => [(m.p.inv ? -1 : 1) * x * m.p.b / m.p.a],
+    code: (m, [x], n) => [`${n} = ${m.p.inv ? '-' : ''}${x} * ${m.p.b}/${m.p.a}`, '비례 연산: 팔 길이 비율만큼 곱하기'],
+    draw(c, m, b) {
+      const { a, b: bb, inv } = m.p, x = clamp(m.inV[0] ?? 0, -40, 40), py = b.cy + 4, reach = Math.max(a, bb);
+      if (inv) { // 시소형: 받침점이 가운데
+        const sc = (b.w - 16) / (a + bb), px = b.x + 8 + a * sc, t = Math.asin(clamp(x / a, -0.6, 0.6));
+        const lx = px - a * sc * Math.cos(t), ly = py - a * sc * Math.sin(t), rx = px + bb * sc * Math.cos(t), ry = py + bb * sc * Math.sin(t);
+        line(c, lx, ly, rx, ry, INK, 4); line(c, lx, ly, lx, b.y + b.h + 6, SIG.lin.c, 3); line(c, rx, ry, rx, b.y - 6, SIG.lin.c, 3);
+        ground(c, px, py + 2); joint(c, px, py);
+      } else { // 받침점이 한쪽 끝
+        const sc = (b.w - 16) / reach, px = b.x + 8, t = Math.asin(clamp(x / a, -0.6, 0.6));
+        const ix = px + a * sc * Math.cos(t), iy = py - a * sc * Math.sin(t), ox = px + bb * sc * Math.cos(t), oy = py - bb * sc * Math.sin(t);
+        const ex = px + reach * sc * Math.cos(t), ey = py - reach * sc * Math.sin(t);
+        line(c, px, py, ex, ey, INK, 4); line(c, ix, iy, ix, b.y + b.h + 6, SIG.lin.c, 3); line(c, ox, oy, ox, b.y - 6, CAT.conv.c, 3);
+        ground(c, px, py + 2); joint(c, px, py); joint(c, ix, iy); joint(c, ox, oy);
+      }
+    } },
+
+  switch: { name: '입력 스위치', base: '스위치', cat: 'logic', concept: '입력 변수', w: 150, h: 110, ins: [], outs: [{ n: '신호 막대', t: 'lin' }],
+    desc: '0 또는 1을 내보내는 입력 막대입니다 (1 = 10mm 들림). 모듈을 눌러 바꾸거나, 클록으로 자동 반복시킵니다.',
+    params: [{ k: 'period', l: '자동 바꾸기 (클록)', type: 'select', o: [[0, '끄기 (눌러서 바꾸기)'], [0.5, '0.5초마다'], [1, '1초마다'], [2, '2초마다'], [4, '4초마다']], d: 0 }, { k: 'on', l: '현재 값 1', type: 'check', d: 0 }],
+    eval: (m, i, t) => [m.p.period > 0 ? (Math.floor(t / m.p.period) % 2 ? HI : 0) : (m.p.on ? HI : 0)],
+    code: (m, i, n) => m.p.period > 0 ? [`${n} = (t // ${m.p.period}) % 2`, `클록 입력: ${m.p.period}초마다 0 ↔ 1`] : [`${n} = ${m.p.on ? 1 : 0}`, '입력 변수 (모듈을 눌러 바꾸기)'],
+    read: m => `${m.label} = ${bit(m.outV[0]) ? 1 : 0}`,
+    draw(c, m, b) {
+      const on = bit(m.outV[0]), tw = 62, th = 26, x = b.cx - tw / 2, y = b.cy - th / 2 - 4;
+      rr(c, x, y, tw, th, 13); c.fillStyle = on ? SIG.lin.c : '#C9D2CD'; c.fill();
+      circ(c, on ? x + tw - 13 : x + 13, y + 13, 10, '#fff', INK, 1.1);
+      txt(c, on ? '1' : '0', on ? x + 16 : x + tw - 16, y + 13, 14, on ? '#fff' : INK, 'center', 700);
+      if (m.p.period > 0) txt(c, `클록 ${m.p.period}초`, b.cx, b.y + b.h - 2, 10, MUTED, 'center');
+    } },
+
+  and: { name: 'AND 게이트', base: 'AND', cat: 'logic', concept: '논리 and', w: 170, h: 120, ins: [{ n: 'A', t: 'lin' }, { n: 'B', t: 'lin' }], outs: [{ n: 'Q', t: 'lin' }],
+    desc: '두 입력 막대가 모두 올라가야 가로 막대가 걸려 출력 막대가 들립니다.',
+    eval: (m, [a, b]) => [bit(a) && bit(b) ? HI : 0],
+    code: (m, [a, b], n) => [`${n} = int(${a} and ${b})`, 'AND: 둘 다 1이면 1'],
+    draw: (c, m, b) => drawGate(c, m, b, 'AND', '둘 다 1 → 1') },
+  or: { name: 'OR 게이트', base: 'OR', cat: 'logic', concept: '논리 or', w: 170, h: 120, ins: [{ n: 'A', t: 'lin' }, { n: 'B', t: 'lin' }], outs: [{ n: 'Q', t: 'lin' }],
+    desc: '두 입력 막대 중 하나만 올라가도 출력 막대를 밀어 올립니다.',
+    eval: (m, [a, b]) => [bit(a) || bit(b) ? HI : 0],
+    code: (m, [a, b], n) => [`${n} = int(${a} or ${b})`, 'OR: 하나라도 1이면 1'],
+    draw: (c, m, b) => drawGate(c, m, b, 'OR', '하나라도 1 → 1') },
+  not: { name: 'NOT 게이트', base: 'NOT', cat: 'logic', concept: '논리 not', w: 170, h: 120, ins: [{ n: 'A', t: 'lin' }], outs: [{ n: 'Q', t: 'lin' }],
+    desc: '시소 레버로 입력을 뒤집습니다. 입력이 올라가면 출력은 내려갑니다.',
+    eval: (m, [a]) => [bit(a) ? 0 : HI],
+    code: (m, [a], n) => [`${n} = int(not ${a})`, 'NOT: 0 ↔ 1 뒤집기'],
+    draw: (c, m, b) => drawGate(c, m, b, 'NOT', '0 ↔ 1 뒤집기') },
+  xor: { name: 'XOR 게이트', base: 'XOR', cat: 'logic', concept: '논리 xor', w: 170, h: 120, ins: [{ n: 'A', t: 'lin' }, { n: 'B', t: 'lin' }], outs: [{ n: 'Q', t: 'lin' }],
+    desc: '두 입력이 서로 다를 때만 출력 막대가 들립니다. 반가산기의 합(S)을 만듭니다.',
+    eval: (m, [a, b]) => [bit(a) !== bit(b) ? HI : 0],
+    code: (m, [a, b], n) => [`${n} = int(${a} != ${b})`, 'XOR: 서로 다르면 1'],
+    draw: (c, m, b) => drawGate(c, m, b, 'XOR', '서로 다르면 1') },
+
+  lamp: { name: '표시등', base: '램프', cat: 'out', concept: '출력 print', w: 140, h: 120, ins: [{ n: '입력 막대', t: 'lin' }], outs: [],
+    desc: '직선 입력이 5mm 이상 들리면 켜집니다. 결과를 눈으로 확인하는 출력입니다.',
+    eval: () => [],
+    code: (m, [x]) => [`출력("${m.label}", ${x})`, '결과 보여주기 (print)'],
+    read: m => m.inV[0] == null ? null : `${m.label} = ${bit(m.inV[0]) ? '1 (켜짐)' : '0 (꺼짐)'}`,
+    draw(c, m, b) {
+      const on = bit(m.inV[0]), r = Math.min(b.h * 0.36, 24);
+      if (on) { const g = c.createRadialGradient(b.cx, b.cy - 4, 2, b.cx, b.cy - 4, r * 2); g.addColorStop(0, 'rgba(242,183,5,.55)'); g.addColorStop(1, 'rgba(242,183,5,0)'); c.fillStyle = g; c.fillRect(b.x, b.y, b.w, b.h); }
+      circ(c, b.cx, b.cy - 4, r, on ? '#FFD84D' : '#E1E5E8', INK, 1.3);
+      c.fillStyle = '#9AA5AE'; c.fillRect(b.cx - 8, b.cy - 4 + r - 1, 16, 9);
+    } },
+
+  plot: { name: '운동 그래프', base: '그래프', cat: 'out', concept: '관찰 debug', w: 250, h: 170, ins: [{ n: '관찰할 축', t: 'any' }], outs: [],
+    desc: '연결한 축의 움직임을 시간에 따라 그리고, 어떤 종류의 운동인지 판정합니다. 회전축과 직선축 모두 연결할 수 있습니다.',
+    eval: (m, [x], t, dt) => { const s = m.st; s.buf = s.buf || []; if (dt > 0) { s.buf.push(x); if (s.buf.length > 480) s.buf.shift(); s.cls = classify(s.buf, m.inT[0]); } return []; },
+    code: (m, [x]) => [`그래프(${x})`, '움직임 관찰 (디버깅)'],
+    read: m => m.inV[0] == null ? null : (m.st.cls || '측정 중…'),
+    draw(c, m, b) {
+      const buf = m.st.buf || [], col = SIG[m.inT[0] || 'any'].c;
+      c.strokeStyle = '#DDE3DF'; c.lineWidth = 1; for (let i = 1; i < 4; i++) { const y = b.y + b.h * i / 4; c.beginPath(); c.moveTo(b.x, y); c.lineTo(b.x + b.w, y); c.stroke(); }
+      c.strokeStyle = '#B7C1C8'; c.strokeRect(b.x, b.y, b.w, b.h);
+      if (buf.length < 2) return;
+      let mn = Math.min(...buf), mx = Math.max(...buf); if (mx - mn < 1e-6) { mn -= 1; mx += 1; }
+      c.strokeStyle = col; c.lineWidth = 2; c.beginPath();
+      buf.forEach((v, i) => { const x = b.x + b.w * i / 479, y = b.y + b.h - 4 - (v - mn) / (mx - mn) * (b.h - 8); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke();
+      const u = m.inT[0] === 'rot' ? '°' : 'mm';
+      txt(c, `${mx.toFixed(0)}${u}`, b.x + 3, b.y + 7, 9, MUTED); txt(c, `${mn.toFixed(0)}${u}`, b.x + 3, b.y + b.h - 7, 9, MUTED);
+    } }
+};
+for (const k in DEFS) { DEFS[k].params = DEFS[k].params || []; DEFS[k].w = DEFS[k].w || W; DEFS[k].h = DEFS[k].h || H; }
+const PALETTE = { src: ['motor'], trans: ['gear', 'pulley', 'worm'], conv: ['crank', 'fourbar', 'cam', 'geneva', 'rack', 'ratchet', 'lever'], logic: ['switch', 'and', 'or', 'not', 'xor'], out: ['lamp', 'plot'] };
+
+function rackIdx(m, v) { const cw = m.p.L / m.p.cells; return clamp(Math.floor(v / cw + 1e-6), 0, m.p.cells - 1); }
+function drawGate(c, m, b, sym, rule) {
+  const n = DEFS[m.type].ins.length, base = b.y + b.h - 2, maxH = b.h - 18;
+  const rod = (x, v, lab) => { const on = bit(v), hh = 8 + clamp(v ?? 0, 0, HI) / HI * (maxH - 14);
+    c.fillStyle = '#E6E3EE'; c.fillRect(x - 5, base - maxH, 10, maxH); c.fillStyle = on ? SIG.lin.c : '#B9C0C6'; c.fillRect(x - 4, base - hh, 8, hh);
+    txt(c, lab, x, b.y + 4, 10, MUTED, 'center', 600); };
+  for (let i = 0; i < n; i++) rod(b.x + 6 + i * 20, m.inV[i], DEFS[m.type].ins[i].n);
+  rod(b.x + b.w - 6, m.outV[0], 'Q');
+  const mx = (b.x + 6 + (n - 1) * 20 + b.x + b.w - 6) / 2;
+  txt(c, sym, mx, b.cy - 6, 18, CAT.logic.c, 'center', 700);
+  txt(c, rule, mx, b.cy + 14, 10, MUTED, 'center');
+}
+
+/* =====================================================================
+   상태
+   ===================================================================== */
+let mods = [], wires = [], nextId = 1, modById = new Map(), inMap = {}, order = [];
+let view = { x: 40, y: 40, s: 1 }, sel = { kind: null, id: null };
+let running = true, simT = 0, speed = 1, stepReq = 0, lastTs = 0;
+const cv = $('#stage'), ctx = cv.getContext('2d'); let cw = 0, ch = 0, dpr = 1;
+
+function defaults(type) { const p = {}; DEFS[type].params.forEach(q => p[q.k] = q.d); return p; }
+function autoLabel(type) { const base = DEFS[type].base; let i = 1; while (mods.some(m => m.label === base + i)) i++; return base + i; }
+function addModule(type, x, y, params, label, id) {
+  const m = { id: id || nextId++, type, x, y, label: label || autoLabel(type), p: Object.assign(defaults(type), params || {}), st: {}, inV: [], outV: [], inT: [] };
+  nextId = Math.max(nextId, m.id + 1); mods.push(m); return m;
+}
+function srcType(from) { const m = modById.get(from.m); return m ? DEFS[m.type].outs[from.p].t : null; }
+function rebuild() {
+  modById = new Map(mods.map(m => [m.id, m]));
+  wires = wires.filter(w => modById.has(w.from.m) && modById.has(w.to.m));
+  inMap = {}; wires.forEach(w => { (inMap[w.to.m] = inMap[w.to.m] || [])[w.to.p] = w.from; });
+  const indeg = new Map(mods.map(m => [m.id, 0])), outs = new Map(mods.map(m => [m.id, []]));
+  wires.forEach(w => { indeg.set(w.to.m, indeg.get(w.to.m) + 1); outs.get(w.from.m).push(w.to.m); });
+  const q = mods.filter(m => !indeg.get(m.id)).map(m => m.id); order = [];
+  while (q.length) { const id = q.shift(); order.push(modById.get(id)); outs.get(id).forEach(t => { indeg.set(t, indeg.get(t) - 1); if (!indeg.get(t)) q.push(t); }); }
+  mods.forEach(m => { if (!order.includes(m)) order.push(m); });
+  regenCode();
+}
+function reaches(fromId, targetId) { // fromId 에서 출발해 targetId 에 닿는가
+  const seen = new Set(), st = [fromId];
+  while (st.length) { const id = st.pop(); if (id === targetId) return true; if (seen.has(id)) continue; seen.add(id); wires.forEach(w => { if (w.from.m === id) st.push(w.to.m); }); }
+  return false;
+}
+function connect(from, to) {
+  const fm = modById.get(from.m), tm = modById.get(to.m);
+  const ft = DEFS[fm.type].outs[from.p].t, tt = DEFS[tm.type].ins[to.p].t;
+  if (fm === tm) return toast('모듈의 출력을 자기 자신에게 연결할 수 없어요.');
+  if (tt !== 'any' && ft !== tt) {
+    return toast(ft === 'rot' ? '회전축(●)은 직선 입력(■)에 바로 맞물리지 않아요. 크랭크, 캠, 랙처럼 회전을 직선으로 바꾸는 변환 모듈을 사이에 넣어 보세요.'
+      : '직선축(■)은 회전 입력(●)에 바로 맞물리지 않아요. 회전 신호가 필요한 곳에는 회전을 내보내는 모듈을 연결하세요.');
+  }
+  if (reaches(to.m, from.m)) return toast('동력이 한 바퀴 돌아 제자리로 오는 순환 연결은 만들 수 없어요.');
+  wires = wires.filter(w => !(w.to.m === to.m && w.to.p === to.p));
+  wires.push({ id: nextId++, from: { ...from }, to: { ...to } });
+  rebuild();
+}
+function removeModule(id) { mods = mods.filter(m => m.id !== id); wires = wires.filter(w => w.from.m !== id && w.to.m !== id); sel = { kind: null }; rebuild(); renderProps(); }
+function resetSim() { simT = 0; mods.forEach(m => { m.st = {}; }); }
+
+/* =====================================================================
+   시뮬레이션
+   ===================================================================== */
+function evalAll(dt) {
+  for (const m of order) {
+    const d = DEFS[m.type], src = inMap[m.id] || [];
+    m.inT = d.ins.map((_, i) => src[i] ? srcType(src[i]) : null);
+    m.inV = d.ins.map((_, i) => { const s = src[i]; if (!s) return null; const sm = modById.get(s.m); return sm.outV[s.p] ?? null; });
+    m.warn = null;
+    const prev = m.outV[0];
+    if (m.inV.some(v => v == null)) { m.outV = d.outs.map(() => null); m.warn = '입력축이 비어 있어요'; m.moving = false; continue; }
+    m.outV = d.eval(m, m.inV, simT, dt) || [];
+    m.moving = m.outV[0] != null && prev != null && Math.abs(m.outV[0] - prev) > 1e-6;
+  }
+}
+
+/* =====================================================================
+   그리기
+   ===================================================================== */
+function portPos(m, dir, i) { const d = DEFS[m.type], arr = dir === 'in' ? d.ins : d.outs; return { x: dir === 'in' ? m.x : m.x + d.w, y: m.y + HEAD + (d.h - HEAD) * (i + 1) / (arr.length + 1) }; }
+function drawPort(c, x, y, t, filled, hl) {
+  const col = SIG[t].c; c.lineWidth = 2.2; c.strokeStyle = col; c.fillStyle = filled ? col : '#fff';
+  c.beginPath();
+  if (t === 'rot') c.arc(x, y, 7, 0, TAU); else if (t === 'lin') c.rect(x - 6.5, y - 6.5, 13, 13); else { c.moveTo(x, y - 8); c.lineTo(x + 8, y); c.lineTo(x, y + 8); c.lineTo(x - 8, y); c.closePath(); }
+  c.fill(); c.stroke();
+  if (hl) { c.strokeStyle = SEL; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 12, 0, TAU); c.stroke(); }
+}
+function fmt(v, t) {
+  if (v == null) return '—';
+  if (t === 'rot') return Math.abs(v) < 360 ? `${v.toFixed(0)}°` : `${v.toFixed(0)}° (${(v / 360).toFixed(1)}바퀴)`;
+  return `${v.toFixed(1)} mm`;
+}
+function drawModule(c, m) {
+  const d = DEFS[m.type], { x, y } = m, w = d.w, h = d.h, selected = sel.kind === 'mod' && sel.id === m.id;
+  c.fillStyle = 'rgba(31,42,51,0.10)'; rr(c, x + 2, y + 4, w, h, 10); c.fill();
+  c.fillStyle = PLATE; rr(c, x, y, w, h, 10); c.fill();
+  c.save(); rr(c, x, y, w, h, 10); c.clip(); c.fillStyle = CAT[d.cat].c; c.fillRect(x, y, w, HEAD); c.restore();
+  c.strokeStyle = selected ? SEL : '#A9B3BA'; c.lineWidth = selected ? 3 : 1.1; rr(c, x, y, w, h, 10); c.stroke();
+  txt(c, m.label, x + 10, y + HEAD / 2 + 1, 12.5, '#fff', 'left', 700);
+  txt(c, d.concept, x + w - 9, y + HEAD / 2 + 1, 10.5, 'rgba(255,255,255,.88)', 'right', 600);
+  const b = { x: x + 18, y: y + HEAD + 8, w: w - 36, h: h - HEAD - 30 }; b.cx = b.x + b.w / 2; b.cy = b.y + b.h / 2;
+  const idle = m.inV.some(v => v == null);
+  c.save(); c.beginPath(); c.rect(x + 12, y + HEAD + 2, w - 24, h - HEAD - 20); c.clip();
+  c.globalAlpha = idle ? 0.45 : 1; d.draw(c, m, b); c.restore();
+  let r = idle ? '입력을 연결하세요' : (d.read ? d.read(m) : (d.outs.length ? fmt(m.outV[0], d.outs[0].t) : ''));
+  txt(c, r || '', x + w / 2, y + h - 10, 11, idle ? '#B23A2E' : (m.warn ? '#B23A2E' : INK), 'center', 600);
+  if (m.warn && !idle) { circ(c, x + w - 12, y + h - 10, 6, '#B23A2E'); txt(c, '!', x + w - 12, y + h - 10, 10, '#fff', 'center', 700); }
+  d.ins.forEach((p, i) => { const q = portPos(m, 'in', i); const hl = drag && drag.kind === 'wire' && (p.t === 'any' || p.t === drag.t) && drag.from.m !== m.id; drawPort(c, q.x, q.y, p.t, !!(inMap[m.id] && inMap[m.id][i]), hl); });
+  d.outs.forEach((p, i) => { const q = portPos(m, 'out', i); drawPort(c, q.x, q.y, p.t, wires.some(w => w.from.m === m.id && w.from.p === i), false); });
+}
+function bez(a, b) { const dx = Math.max(40, Math.abs(b.x - a.x) / 2); return [a, { x: a.x + dx, y: a.y }, { x: b.x - dx, y: b.y }, b]; }
+function bezPts(a, b, n = 24) { const [p0, p1, p2, p3] = bez(a, b), out = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; out.push({ x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x, y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y }); } return out; }
+function drawWire(c, a, b, t, selected, flow) {
+  const [p0, p1, p2, p3] = bez(a, b);
+  const path = () => { c.beginPath(); c.moveTo(p0.x, p0.y); c.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y); };
+  path(); c.strokeStyle = selected ? SEL : SIG[t].c; c.lineWidth = selected ? 6 : 4; c.stroke();
+  if (flow) { path(); c.setLineDash([6, 10]); c.lineDashOffset = -simT * 60; c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 2; c.stroke(); c.setLineDash([]); }
+}
+function drawGrid(c) {
+  const s = view.s, x0 = -view.x / s, y0 = -view.y / s, x1 = x0 + cw / s, y1 = y0 + ch / s;
+  const lines = (step, col, w) => { c.strokeStyle = col; c.lineWidth = w / s; c.beginPath();
+    for (let x = Math.floor(x0 / step) * step; x < x1; x += step) { c.moveTo(x, y0); c.lineTo(x, y1); }
+    for (let y = Math.floor(y0 / step) * step; y < y1; y += step) { c.moveTo(x0, y); c.lineTo(x1, y); } c.stroke(); };
+  if (s > 0.55) lines(GRID, '#DAE2D9', 1); lines(GRID * 5, '#C8D3C7', 1);
+}
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#E6ECE5'; ctx.fillRect(0, 0, cw, ch);
+  ctx.setTransform(dpr * view.s, 0, 0, dpr * view.s, dpr * view.x, dpr * view.y);
+  drawGrid(ctx);
+  wires.forEach(w => { const fm = modById.get(w.from.m), tm = modById.get(w.to.m); drawWire(ctx, portPos(fm, 'out', w.from.p), portPos(tm, 'in', w.to.p), srcType(w.from), sel.kind === 'wire' && sel.id === w.id, running && fm.moving); });
+  if (drag && drag.kind === 'wire') { const fm = modById.get(drag.from.m); drawWire(ctx, portPos(fm, 'out', drag.from.p), drag.pt, drag.t, false, false); }
+  mods.forEach(m => drawModule(ctx, m));
+  if (!mods.length) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); txt(ctx, '빈 작업판입니다. 왼쪽에서 모듈을 추가하거나 위의 예제를 불러오세요.', cw / 2, ch / 2, 15, MUTED, 'center', 600); }
+}
+function frame(ts) {
+  const real = lastTs ? clamp((ts - lastTs) / 1000, 0, 0.05) : 0; lastTs = ts;
+  let dt = 0; if (running) dt = real * speed; if (stepReq) { dt += stepReq; stepReq = 0; }
+  simT += dt; evalAll(dt); draw(); requestAnimationFrame(frame);
+}
+function resize() { const r = $('#stageWrap').getBoundingClientRect(); dpr = window.devicePixelRatio || 1; cw = r.width; ch = r.height; cv.width = cw * dpr; cv.height = ch * dpr; }
+new ResizeObserver(resize).observe($('#stageWrap'));
+
+/* =====================================================================
+   마우스 / 터치
+   ===================================================================== */
+let drag = null;
+const toWorld = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left - view.x) / view.s, y: (e.clientY - r.top - view.y) / view.s }; };
+function hitPort(p) {
+  for (let k = mods.length - 1; k >= 0; k--) { const m = mods[k], d = DEFS[m.type];
+    for (const dir of ['out', 'in']) { const arr = dir === 'in' ? d.ins : d.outs;
+      for (let i = 0; i < arr.length; i++) { const q = portPos(m, dir, i); if (Math.hypot(q.x - p.x, q.y - p.y) < 13) return { m, dir, i, t: arr[i].t }; } } }
+  return null;
+}
+function hitMod(p) { for (let k = mods.length - 1; k >= 0; k--) { const m = mods[k], d = DEFS[m.type]; if (p.x >= m.x && p.x <= m.x + d.w && p.y >= m.y && p.y <= m.y + d.h) return m; } return null; }
+function hitWire(p) {
+  for (const w of wires) { const pts = bezPts(portPos(modById.get(w.from.m), 'out', w.from.p), portPos(modById.get(w.to.m), 'in', w.to.p));
+    for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy || 1;
+      const t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / L, 0, 1); if (Math.hypot(a.x + t * dx - p.x, a.y + t * dy - p.y) < 7) return w; } }
+  return null;
+}
+function select(kind, id) { sel = { kind, id }; renderProps(); }
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId); const p = toWorld(e), hp = hitPort(p);
+  if (hp && hp.dir === 'out') { drag = { kind: 'wire', from: { m: hp.m.id, p: hp.i }, t: hp.t, pt: p }; return; }
+  if (hp && hp.dir === 'in' && inMap[hp.m.id] && inMap[hp.m.id][hp.i]) {
+    const from = inMap[hp.m.id][hp.i]; wires = wires.filter(w => !(w.to.m === hp.m.id && w.to.p === hp.i)); rebuild();
+    drag = { kind: 'wire', from, t: srcType(from), pt: p }; return;
+  }
+  const m = hitMod(p);
+  if (m) { mods.splice(mods.indexOf(m), 1); mods.push(m); select('mod', m.id); drag = { kind: 'mod', m, ox: p.x - m.x, oy: p.y - m.y, sx: e.clientX, sy: e.clientY, moved: false }; return; }
+  const w = hitWire(p); if (w) { select('wire', w.id); return; }
+  if (sel.kind) select(null, null);
+  drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+});
+cv.addEventListener('pointermove', e => {
+  const p = toWorld(e);
+  if (!drag) {
+    const hp = hitPort(p), m = hitMod(p);
+    $('#status').textContent = hp ? `${hp.m.label}: ${DEFS[hp.m.type][hp.dir === 'in' ? 'ins' : 'outs'][hp.i].n} (${hp.dir === 'in' ? '입력' : '출력'}, ${SIG[hp.t].n}축)` : m ? `${m.label}: ${DEFS[m.type].name}${m.type === 'switch' ? ' (눌러서 0/1 바꾸기)' : ''}` : '빈 곳을 끌면 화면 이동, 휠로 확대/축소';
+    cv.style.cursor = hp ? 'crosshair' : m ? 'grab' : 'default'; return;
+  }
+  if (drag.kind === 'wire') drag.pt = p;
+  else if (drag.kind === 'mod') { if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4) drag.moved = true; if (drag.moved) { drag.m.x = p.x - drag.ox; drag.m.y = p.y - drag.oy; } }
+  else if (drag.kind === 'pan') { view.x = drag.vx + e.clientX - drag.sx; view.y = drag.vy + e.clientY - drag.sy; }
+});
+cv.addEventListener('pointerup', e => {
+  const p = toWorld(e);
+  if (drag && drag.kind === 'wire') { const hp = hitPort(p); if (hp && hp.dir === 'in') connect(drag.from, { m: hp.m.id, p: hp.i }); }
+  if (drag && drag.kind === 'mod') {
+    const m = drag.m;
+    if (drag.moved) { m.x = Math.round(m.x / GRID) * GRID; m.y = Math.round(m.y / GRID) * GRID; }
+    else if (m.type === 'switch') { if (m.p.period > 0) m.p.period = 0; m.p.on = bit(m.outV[0]) ? 0 : 1; renderProps(); regenCode(); }
+  }
+  drag = null;
+});
+cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+function zoomAt(sx, sy, f) { const ns = clamp(view.s * f, 0.3, 2.5); view.x = sx - (sx - view.x) * ns / view.s; view.y = sy - (sy - view.y) * ns / view.s; view.s = ns; }
+function fitView() {
+  if (!mods.length) { view = { x: 40, y: 40, s: 1 }; return; }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  mods.forEach(m => { const d = DEFS[m.type]; x0 = Math.min(x0, m.x); y0 = Math.min(y0, m.y); x1 = Math.max(x1, m.x + d.w); y1 = Math.max(y1, m.y + d.h); });
+  const s = clamp(Math.min(cw / (x1 - x0 + 80), ch / (y1 - y0 + 80)), 0.3, 1.2);
+  view = { s, x: (cw - (x1 - x0) * s) / 2 - x0 * s, y: (ch - (y1 - y0) * s) / 2 - y0 * s };
+}
+$('#zIn').onclick = () => zoomAt(cw / 2, ch / 2, 1.2); $('#zOut').onclick = () => zoomAt(cw / 2, ch / 2, 1 / 1.2); $('#zFit').onclick = fitView;
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || !$('#modal').hidden) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { if (sel.kind === 'mod') removeModule(sel.id); else if (sel.kind === 'wire') { wires = wires.filter(w => w.id !== sel.id); select(null); rebuild(); } e.preventDefault(); }
+  if (e.key === ' ') { togglePlay(); e.preventDefault(); }
+});
+
+/* 팔레트: 누르면 추가, 끌어서 놓기도 가능 */
+function buildPalette() {
+  const el = $('#palette'); el.innerHTML = '';
+  Object.entries(PALETTE).forEach(([cat, list]) => {
+    const box = document.createElement('div'); box.className = 'cat';
+    box.innerHTML = `<h4><i style="background:${CAT[cat].c}"></i>${CAT[cat].n}</h4>`;
+    list.forEach(type => {
+      const d = DEFS[type], b = document.createElement('button'); b.className = 'pal'; b.draggable = true;
+      const io = `${d.ins.map(p => SIG[p.t].n).join('·') || '없음'} → ${d.outs.map(p => SIG[p.t].n).join('·') || '표시'}`;
+      b.innerHTML = `<b>${d.name}</b><span>${io}</span>`;
+      b.onclick = () => { const n = mods.length % 6; const m = addModule(type, Math.round(((cw / 2 - view.x) / view.s - d.w / 2 + n * 20) / GRID) * GRID, Math.round(((ch / 2 - view.y) / view.s - d.h / 2 + n * 20) / GRID) * GRID); rebuild(); select('mod', m.id); };
+      b.ondragstart = e => e.dataTransfer.setData('text/plain', type);
+      box.appendChild(b);
+    });
+    el.appendChild(box);
+  });
+}
+cv.addEventListener('dragover', e => e.preventDefault());
+cv.addEventListener('drop', e => { e.preventDefault(); const type = e.dataTransfer.getData('text/plain'); if (!DEFS[type]) return; const p = toWorld(e), d = DEFS[type];
+  const m = addModule(type, Math.round((p.x - d.w / 2) / GRID) * GRID, Math.round((p.y - HEAD / 2) / GRID) * GRID); rebuild(); select('mod', m.id); });
+
+/* =====================================================================
+   오른쪽 패널: 속성, 번역 코드, 점검
+   ===================================================================== */
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+function renderProps() {
+  const el = $('#props');
+  if (sel.kind === 'mod') {
+    const m = modById.get(sel.id); if (!m) { sel = { kind: null }; return renderProps(); }
+    const d = DEFS[m.type];
+    const io = `입력: ${d.ins.map(p => `${p.n} (${SIG[p.t].n})`).join(', ') || '없음'}<br>출력: ${d.outs.map(p => `${p.n} (${SIG[p.t].n})`).join(', ') || '없음'}`;
+    let h = `<div class="ptitle"><i style="background:${CAT[d.cat].c}"></i>${d.name}</div><span class="concept">코딩 개념: ${d.concept}</span>
+      <p class="desc">${d.desc}</p><div class="io">${io}</div>
+      <div class="field"><label>이름 (코드 변수명)</label><input type="text" id="f_label" value="${esc(m.label)}" maxlength="16"></div>`;
+    d.params.forEach(q => {
+      const v = m.p[q.k];
+      if (q.type === 'select') h += `<div class="field"><label>${q.l}</label><select data-k="${q.k}">${q.o.map(([val, lab], i) => `<option value="${i}" ${val == v ? 'selected' : ''}>${lab}</option>`).join('')}</select></div>`;
+      else if (q.type === 'check') h += `<div class="field check"><label><input type="checkbox" data-k="${q.k}" ${v ? 'checked' : ''}>${q.l}</label></div>`;
+      else h += `<div class="field"><label>${q.l}<output id="o_${q.k}">${v}</output></label><input type="range" data-k="${q.k}" min="${q.min}" max="${q.max}" step="${q.step}" value="${v}"></div>`;
+    });
+    if (d.cat === 'logic') h += `<p class="desc">논리 신호 약속: 막대가 0mm면 0, 10mm면 1. 5mm 이상 들리면 1로 읽습니다.</p>`;
+    h += `<div id="pinfo">${d.info ? d.info(m) : ''}</div><button class="danger" id="delMod">모듈 삭제</button>`;
+    el.innerHTML = h;
+    $('#f_label').oninput = e => { m.label = e.target.value.trim() || d.base; regenCode(); };
+    el.querySelectorAll('[data-k]').forEach(inp => {
+      const q = d.params.find(x => x.k === inp.dataset.k);
+      const apply = () => {
+        if (q.type === 'select') m.p[q.k] = q.o[+inp.value][0];
+        else if (q.type === 'check') m.p[q.k] = inp.checked ? 1 : 0;
+        else { m.p[q.k] = +inp.value; $('#o_' + q.k).textContent = inp.value; }
+        if (m.type === 'ratchet') m.st = {};
+        $('#pinfo').innerHTML = d.info ? d.info(m) : ''; regenCode();
+      };
+      inp.addEventListener('input', apply); inp.addEventListener('change', apply);
+    });
+    $('#delMod').onclick = () => removeModule(m.id);
+  } else if (sel.kind === 'wire') {
+    const w = wires.find(x => x.id === sel.id); if (!w) { sel = { kind: null }; return renderProps(); }
+    const fm = modById.get(w.from.m), tm = modById.get(w.to.m);
+    el.innerHTML = `<div class="ptitle"><i style="background:${SIG[srcType(w.from)].c}"></i>연결 (축 결합)</div>
+      <p class="desc">${esc(fm.label)}의 ${DEFS[fm.type].outs[w.from.p].n} → ${esc(tm.label)}의 ${DEFS[tm.type].ins[w.to.p].n}<br>${SIG[srcType(w.from)].n} 신호가 전달됩니다.</p>
+      <button class="danger" id="delWire">연결 끊기</button>`;
+    $('#delWire').onclick = () => { wires = wires.filter(x => x.id !== w.id); select(null); rebuild(); };
+  } else {
+    el.innerHTML = `<div class="ptitle">사용 방법</div><div class="help"><ol>
+      <li>왼쪽 모듈을 누르거나 끌어서 작업판에 놓아요.</li>
+      <li>모듈 오른쪽 출력축을 끌어 다음 모듈의 왼쪽 입력축에 놓으면 맞물려요.</li>
+      <li>같은 모양의 축끼리만 연결돼요. 모양이 다르면 변환 모듈이 필요해요.</li>
+      <li>끝에 운동 그래프를 달면 어떤 운동인지 판정해 줘요.</li>
+      <li>연결된 입력축을 끌어내면 연결이 풀려요. 선택 후 Delete 키로 삭제.</li></ol></div>
+      <div class="legend"><span><i class="shape rot"></i>회전축</span><span><i class="shape lin"></i>직선축</span><span><i class="shape any"></i>아무거나</span></div>`;
+  }
+}
+function varName(m) { let s = (m.label || m.type).replace(/[^\p{L}\p{N}_]/gu, '_'); if (/^\p{N}/u.test(s)) s = '_' + s; return s; }
+function regenCode() {
+  const lines = [`<span class="cm"># 기계 번역 코드: 연결 순서대로 실행됩니다</span>`, `<span class="cm"># t = 흐른 시간(초), 회전은 °, 직선은 mm</span>`, `while 손잡이가_돌아가는_동안:`];
+  if (!mods.length) lines.push('    pass');
+  order.forEach(m => {
+    const d = DEFS[m.type], src = inMap[m.id] || [];
+    const names = d.ins.map((_, i) => src[i] ? varName(modById.get(src[i].m)) : '❓');
+    const [expr, note] = d.code(m, names, varName(m));
+    lines.push(`    <span class="cm"># ${esc(note)}${names.includes('❓') ? ' (입력 연결 필요)' : ''}</span>`, `    ${esc(expr)}`);
+  });
+  $('#code').innerHTML = lines.join('\n');
+}
+let lastWarn = '';
+setInterval(() => {
+  const list = mods.filter(m => m.warn).map(m => `<div><b>${esc(m.label)}</b>: ${m.warn}</div>`);
+  const html = list.length ? list.join('') : (mods.length ? '<p class="desc">문제 없이 맞물려 돌아가고 있어요.</p>' : '');
+  if (html !== lastWarn) { $('#warn').innerHTML = html; lastWarn = html; }
+}, 300);
+
+/* =====================================================================
+   예제
+   ===================================================================== */
+function build(list, links) { return { mods: list.map(([type, x, y, p, label], i) => ({ id: i + 1, type, x, y, p: p || {}, label })), wires: links.map(([f, t, tp]) => ({ from: { m: f + 1, p: 0 }, to: { m: t + 1, p: tp || 0 } })) }; }
+const EXAMPLES = [
+  { n: '회전: 기어로 속도 줄이기', d: () => build([['motor', 0, 20, { rpm: 30 }], ['gear', 220, 20, { z1: 15, z2: 45 }], ['plot', 440, 0]], [[0, 1], [1, 2]]) },
+  { n: '직선 왕복: 크랭크-슬라이더', d: () => build([['motor', 0, 20], ['crank', 220, 20], ['plot', 440, 0]], [[0, 1], [1, 2]]) },
+  { n: '요동: 4절 링크', d: () => build([['motor', 0, 20], ['fourbar', 220, 20], ['plot', 440, 0]], [[0, 1], [1, 2]]) },
+  { n: '간헐 회전: 제네바 기구', d: () => build([['motor', 0, 20, { rpm: 15 }], ['geneva', 220, 20], ['plot', 440, 0]], [[0, 1], [1, 2]]) },
+  { n: '조건문 캠: 정해진 각도에서만', d: () => build([['motor', 0, 60], ['cam', 220, 60], ['plot', 440, 0], ['lamp', 440, 200, {}, '들림']], [[0, 1], [1, 2], [1, 3]]) },
+  { n: '요동 + 래칫 = 한 방향 간헐 회전', d: () => build([['motor', 0, 20], ['fourbar', 220, 20], ['ratchet', 440, 20], ['plot', 660, 0]], [[0, 1], [1, 2], [2, 3]]) },
+  { n: '미션 1: 자동 분류 공정 (for + if + 배열)', d: () => build([
+      ['motor', 0, 120, { rpm: 15 }, '손잡이'], ['geneva', 220, 120, { n: 4 }, '반복_i'],
+      ['rack', 440, 0, { r: 19.1, L: 120, cells: 4, start: 15, inv: 1 }, '배열위치'], ['cam', 440, 220, { shape: 'bump', start: 75, width: 30, H: 10 }, 'i가3이면'],
+      ['plot', 660, -20, {}, '위치그래프'], ['lamp', 660, 220, {}, '분류레버']],
+      [[0, 1], [1, 2], [1, 3], [2, 4], [3, 5]]) },
+  { n: '미션 2: 풀리 + 기어 + 크랭크', d: () => build([['motor', 0, 20, { rpm: 30 }, '손잡이'], ['pulley', 220, 20, { d1: 30, d2: 30 }], ['gear', 440, 20, { z1: 12, z2: 36 }], ['crank', 660, 20], ['plot', 880, 0]], [[0, 1], [1, 2], [2, 3], [3, 4]]) },
+  { n: '논리: 반가산기', d: () => build([
+      ['switch', 0, 0, { period: 1 }, 'A'], ['switch', 0, 180, { period: 2 }, 'B'],
+      ['xor', 220, 0, {}, '합'], ['and', 220, 180, {}, '올림'], ['lamp', 440, 0, {}, 'S'], ['lamp', 440, 180, {}, 'C']],
+      [[0, 2, 0], [1, 2, 1], [0, 3, 0], [1, 3, 1], [2, 4], [3, 5]]) },
+  { n: '논리: 전가산기', d: () => build([
+      ['switch', 0, 0, { period: 1 }, 'A'], ['switch', 0, 160, { period: 2 }, 'B'], ['switch', 0, 320, { period: 4 }, 'Cin'],
+      ['xor', 220, 0, {}, 'X1'], ['and', 220, 180, {}, 'N1'], ['xor', 440, 60, {}, 'X2'], ['and', 440, 260, {}, 'N2'],
+      ['or', 660, 220, {}, 'OR1'], ['lamp', 660, 40, {}, 'S'], ['lamp', 880, 220, {}, 'Cout']],
+      [[0, 3, 0], [1, 3, 1], [0, 4, 0], [1, 4, 1], [3, 5, 0], [2, 5, 1], [3, 6, 0], [2, 6, 1], [4, 7, 0], [6, 7, 1], [5, 8], [7, 9]]) }
+];
+EXAMPLES.forEach((e, i) => { const o = document.createElement('option'); o.value = i; o.textContent = e.n; $('#exSel').appendChild(o); });
+$('#exSel').onchange = e => { const i = e.target.value; if (i === '') return; loadData(EXAMPLES[+i].d()); e.target.value = ''; };
+
+/* =====================================================================
+   저장 / 불러오기
+   - Apps Script 안에서 열면 서버(google.script.run)에 저장
+   - GitHub Pages 등 정적 호스팅에서 열면 이 브라우저 저장소에 저장
+   ===================================================================== */
+function serialize() { return { v: 1, mods: mods.map(m => ({ id: m.id, type: m.type, x: m.x, y: m.y, label: m.label, p: m.p })), wires: wires.map(w => ({ from: w.from, to: w.to })) }; }
+function loadData(data) {
+  mods = []; wires = []; nextId = 1; sel = { kind: null };
+  (data.mods || []).forEach(o => { if (DEFS[o.type]) addModule(o.type, o.x, o.y, o.p, o.label, o.id); });
+  rebuild();
+  (data.wires || []).forEach(w => { if (modById.has(w.from.m) && modById.has(w.to.m)) wires.push({ id: nextId++, from: w.from, to: w.to }); });
+  rebuild(); resetSim(); renderProps(); fitView();
+}
+const hasGAS = typeof google !== 'undefined' && google.script && google.script.run;
+const localApi = {
+  _all() { try { return JSON.parse(localStorage.getItem('automata-designs') || '{}'); } catch (e) { return {}; } },
+  _put(o) { try { localStorage.setItem('automata-designs', JSON.stringify(o)); } catch (e) { throw new Error('이 브라우저에서는 저장할 수 없어요. JSON 내보내기를 사용하세요.'); } },
+  listDesigns() { const o = this._all(); return Object.keys(o).map(n => ({ name: n, savedAt: o[n].savedAt })).sort((a, b) => a.savedAt < b.savedAt ? 1 : -1); },
+  saveDesign(n, j) { const o = this._all(); o[n] = { savedAt: new Date().toLocaleString('ko-KR'), data: j }; this._put(o); return this.listDesigns(); },
+  loadDesign(n) { const o = this._all(); if (!o[n]) throw new Error('설계를 찾을 수 없어요.'); return o[n].data; },
+  deleteDesign(n) { const o = this._all(); delete o[n]; this._put(o); return this.listDesigns(); }
+};
+function api(fn, ...args) {
+  return new Promise((res, rej) => {
+    if (hasGAS) google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args);
+    else { try { res(localApi[fn](...args)); } catch (e) { rej(e); } }
+  });
+}
+function openModal(title, body, buttons) {
+  $('#mTitle').textContent = title; $('#mBody').innerHTML = body; const bx = $('#mBtns'); bx.innerHTML = '';
+  buttons.forEach(b => { const el = document.createElement('button'); el.textContent = b.t; if (b.primary) el.className = 'primary'; el.onclick = b.fn || closeModal; bx.appendChild(el); });
+  $('#modal').hidden = false;
+}
+function closeModal() { $('#modal').hidden = true; }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+let currentName = '';
+$('#btnSave').onclick = () => {
+  if (!mods.length) return toast('저장할 모듈이 없어요.');
+  const note = hasGAS ? '' : '<p class="desc">이 컴퓨터의 이 브라우저에만 저장됩니다. 다른 컴퓨터에서 이어서 하거나 제출할 때는 JSON 내보내기를 쓰세요.</p>';
+  openModal('설계 저장', `${note}<input type="text" id="saveName" placeholder="예: 3반 김OO 자동분류기" value="${esc(currentName)}" maxlength="40">`, [
+    { t: '취소' },
+    { t: '저장', primary: true, fn: () => { const n = $('#saveName').value.trim(); if (!n) return toast('이름을 입력하세요.');
+      api('saveDesign', n, JSON.stringify(serialize())).then(() => { currentName = n; closeModal(); toast(`"${n}" 저장했어요.`); }).catch(e => toast(e.message || e)); } }]);
+  setTimeout(() => $('#saveName').focus(), 50);
+};
+function showLoad(list) {
+  const body = list.length ? `<div class="dlist">${list.map((d, i) => `<div><b>${esc(d.name)}</b><small>${esc(d.savedAt || '')}</small><button data-l="${i}">불러오기</button><button data-d="${i}" class="danger">삭제</button></div>`).join('')}</div>` : '<p class="desc">저장된 설계가 없어요. 작업판에서 만든 뒤 저장을 눌러 보세요.</p>';
+  openModal('저장한 설계', body, [{ t: '닫기' }]);
+  $('#mBody').querySelectorAll('[data-l]').forEach(b => b.onclick = () => { const n = list[+b.dataset.l].name;
+    api('loadDesign', n).then(j => { loadData(JSON.parse(j)); currentName = n; closeModal(); toast(`"${n}" 불러왔어요.`); }).catch(e => toast(e.message || e)); });
+  $('#mBody').querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const n = list[+b.dataset.d].name;
+    if (b.dataset.sure) api('deleteDesign', n).then(showLoad).catch(e => toast(e.message || e)); else { b.dataset.sure = 1; b.textContent = '정말 삭제'; } });
+}
+$('#btnLoad').onclick = () => api('listDesigns').then(showLoad).catch(e => toast(e.message || e));
+$('#btnJson').onclick = () => {
+  openModal('JSON 내보내기 / 가져오기', `<p class="desc">아래 내용을 복사해 친구와 나누거나 선생님께 제출하세요. 받은 JSON을 붙여 넣고 적용도 됩니다.</p><textarea id="jsonBox">${esc(JSON.stringify(serialize()))}</textarea>`, [
+    { t: '닫기' },
+    { t: '복사', fn: () => { const t = $('#jsonBox'); t.select(); try { navigator.clipboard.writeText(t.value).then(() => toast('복사했어요.'), () => { document.execCommand('copy'); toast('복사했어요.'); }); } catch (e) { document.execCommand('copy'); toast('복사했어요.'); } } },
+    { t: '적용', primary: true, fn: () => { try { loadData(JSON.parse($('#jsonBox').value)); closeModal(); toast('설계를 적용했어요.'); } catch (e) { toast('JSON 형식이 올바르지 않아요.'); } } }]);
+};
+$('#btnClear').onclick = () => openModal('모두 지우기', '<p class="desc">작업판의 모든 모듈과 연결을 지웁니다. 저장하지 않은 내용은 사라져요.</p>', [{ t: '취소' }, { t: '지우기', primary: true, fn: () => { loadData({ mods: [], wires: [] }); currentName = ''; closeModal(); } }]);
+
+/* 상단 조작 */
+function togglePlay() { running = !running; $('#btnPlay').textContent = running ? '⏸ 멈추기' : '▶ 돌리기'; }
+$('#btnPlay').onclick = togglePlay;
+$('#btnStep').onclick = () => { if (running) togglePlay(); stepReq = 0.1; };
+$('#btnReset').onclick = resetSim;
+$('#speed').oninput = e => { speed = +e.target.value; $('#speedVal').textContent = '×' + speed.toFixed(1); };
+let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200); }
+
+/* 시작 — 주소 끝에 ?ex=3 을 붙이면 그 번호의 예제로 바로 시작합니다 */
+buildPalette(); resize(); renderProps();
+const exParam = parseInt(new URLSearchParams(location.search).get('ex'), 10);
+loadData(EXAMPLES[Number.isInteger(exParam) && EXAMPLES[exParam] ? exParam : 6].d());
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
